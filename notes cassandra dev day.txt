@@ -1,0 +1,87 @@
+how will datacanters replicate? Will the indexes be relplicated or built in place?
+
+Keyspace is like a database. Tables contain partitions. - partition is a set of rows
+Big distributed hash table. partitions is what is retrieved from hashing
+Try to make sure a single partition can resolve your query.
+
+Each partiiton will have a token assosiated with it.
+
+? What is the difference between compaction and compression?
+SizeTieredCompactionStrategy best for writes
+caching - by rowid
+?speculative_retry ?
+
+
+Nodes are "gossiping" - about load, etc.
+
+The driver listens to the gossip and choose the coordinator node that's optimal for that query
+seed node is a known ip address - the driver talks to that to find out who else is there 
+what exatly happes when a node fails?
+
+the remote coordinator is using the same driver to define coordinator in another data centre
+
+Consistency level <> replication factor.
+
+Consistency level = how many replicas need to confirm before the replication is complete.
+quorum = majority of the nodes
+
+on read - all data will have a tstamp, and on read we return the latest.
+
+write heavy application we will write with lighter consistency levels and read with heavier consistency levels
+
+What is log structures?
+
+Only writes - no need to read before writes
+Compactors - reads from the back and write to the front
+
+in sstable w ekeep track of the offsets of every partition  - that what partition index is doing 
+
+so we index the index - offset by range of tokens - the tokens have to go in order - ordered in memory
+
+also key hash in memory of we already accessed a key
+
+we use bloom filter to find out if a partition is in a particular ss table
+
+We use clustering columns in the same order I specify them.
+
+ideally 100k per partition - a single partition per query - stay in a MB range
+
+copy table per use case
+
+always select only the data you need. It has to determine the latest value for a column per column. Query per column.
+
+Don't insert null - C will insert a tombstone, it's much faster
+
+data columns are not searchable
+insert (same pk = update ) this is upsert
+insert if not exists - > causes a read before write
+!! PK must be unique
+Datastax academy
+2.20 will go into
+
+lightweight transactions - read before write - if not exists - also batch - only useful with idenpotency  
+
+
+
+Log storeage: 
+circular storage with a pointer
+
+Hub and spoke - periods of unconnected working
+
+What is local_quorum vs each_quorum vs quorum?
+
+Keyspaces - it will have tables 
+
+clustering columns - like local indexes? what about global indexes?
+
+There is auto load management in the drivers
+
+CREATE KEYSPACE <keyspace name> WITH REPLICATION = {
+    'class' : <replication strategy>,
+    <datacenter name> : <replication factor>,
+    // Specify addition datacenters/replication factors here...
+}
+create aggregates aas separate tables
+
+Counters do not prevent concurrent updates, so they may be slightly off - which is fine for things like counting “likes”, etc. 
+But if we need an exact count, we will need to use an int with lightweight transactions. 
